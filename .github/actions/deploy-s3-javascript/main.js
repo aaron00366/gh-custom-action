@@ -1,16 +1,29 @@
 const core = require('@actions/core');
-// const github = require('@actions/github');
 const exec = require('@actions/exec');
-function run() {
-    // 1) Get some input values
-    const bucket = core.getInput('bucket', {required: true});
-    const bucketRegion = core.getInput('bucket-region', {required: true});
-    const distFolder = core.getInput('dist-folder', {required: true});
 
-    // 2) Upload file to S3
-    const s3Url = `s3://${bucket}/${distFolder}`;
-    exec.exec(`aws s3 sync ${distFolder} ${s3Url} --region ${bucketRegion}`);
+async function run() {
+    try {
+        const bucket = core.getInput('bucket', { required: true });
+        const bucketRegion = core.getInput('bucket-region', { required: true });
+        const distFolder = core.getInput('dist-folder', { required: true });
 
-    core.notice('Hello from my custom JacaScript Action!')
+        core.startGroup('Uploading to S3');
+        core.info(`Bucket: ${bucket}`);
+        core.info(`Region: ${bucketRegion}`);
+        core.info(`Local dist folder: ${distFolder}`);
+
+        // IMPORTANT: sync dist folder CONTENTS to bucket ROOT so index.html is at root
+        const syncCmd = `aws s3 sync ${distFolder} s3://${bucket} --delete --region ${bucketRegion}`;
+        core.info(`Running: ${syncCmd}`);
+        await exec.exec(syncCmd);
+        core.endGroup();
+
+        const websiteUrl = `http://${bucket}.s3-website-${bucketRegion}.amazonaws.com`;
+        core.setOutput('website-url', websiteUrl);
+        core.notice(`Deployment complete. Root website URL (if hosting enabled): ${websiteUrl}`);
+    } catch (err) {
+        core.setFailed(err.message);
+    }
 }
+
 run();
