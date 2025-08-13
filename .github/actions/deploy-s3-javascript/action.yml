@@ -11,6 +11,10 @@ inputs:
   dist-folder:
     description: "The folder containing the deployable files."
     required: true
+outputs:
+  website-url:
+    description: "Public static website endpoint (if hosting enabled)"
+
 runs:
   using: 'node16'
   main: 'main.js'
